@@ -136,6 +136,7 @@ static SDL_Texture* g_glowLayer = nullptr;
 static SDL_Texture* g_textLayer = nullptr;
 
 static std::vector<Particle> g_particles;
+static std::vector<int> g_frameAlpha;
 static SDL_Texture* g_centerTexture = nullptr;
 static int g_centerW = 0, g_centerH = 0;
 static int g_fillStartFrame = 0;
@@ -280,21 +281,23 @@ static SDL_Texture* buildCenterTexture(const std::string& text, int charSize,
     return target;
 }
 
-static void drawGlowText(SDL_Texture* src, int texW, int texH, float x, float y, int alpha) {
+// Assumes the render target is already set by the caller (batched across
+// all particles — see stepFrame) so this never touches SDL_SetRenderTarget
+// itself: switching render targets forces the SDL2/WebGL batch to flush,
+// and doing that per-particle (as drawGlowText used to) tanked framerate.
+static void drawGlow(SDL_Texture* src, int texW, int texH, float x, float y, int alpha) {
+    if (alpha <= 10 || !src) return;
+    SDL_SetTextureAlphaMod(src, (Uint8)std::max(0, alpha / 7));
+    SDL_FRect bigDst{ x - texW * 1.2f, y - texH * 1.2f, texW * 2.4f, texH * 2.4f };
+    SDL_RenderCopyF(g_renderer, src, nullptr, &bigDst);
+
+    SDL_SetTextureAlphaMod(src, (Uint8)std::max(0, alpha / 3));
+    SDL_FRect smallDst{ x - texW * 0.8f, y - texH * 0.8f, texW * 1.6f, texH * 1.6f };
+    SDL_RenderCopyF(g_renderer, src, nullptr, &smallDst);
+}
+
+static void drawText(SDL_Texture* src, int texW, int texH, float x, float y, int alpha) {
     if (alpha <= 0 || !src) return;
-
-    if (alpha > 10) {
-        SDL_SetRenderTarget(g_renderer, g_glowLayer);
-        SDL_SetTextureAlphaMod(src, (Uint8)std::max(0, alpha / 7));
-        SDL_FRect bigDst{ x - texW * 1.2f, y - texH * 1.2f, texW * 2.4f, texH * 2.4f };
-        SDL_RenderCopyF(g_renderer, src, nullptr, &bigDst);
-
-        SDL_SetTextureAlphaMod(src, (Uint8)std::max(0, alpha / 3));
-        SDL_FRect smallDst{ x - texW * 0.8f, y - texH * 0.8f, texW * 1.6f, texH * 1.6f };
-        SDL_RenderCopyF(g_renderer, src, nullptr, &smallDst);
-    }
-
-    SDL_SetRenderTarget(g_renderer, g_textLayer);
     SDL_SetTextureAlphaMod(src, (Uint8)alpha);
     SDL_FRect dst{ x - texW / 2.0f, y - texH / 2.0f, (float)texW, (float)texH };
     SDL_RenderCopyF(g_renderer, src, nullptr, &dst);
@@ -357,10 +360,9 @@ static void clearLayer(SDL_Texture* layer) {
 static void stepFrame() {
     g_frame++;
 
-    clearLayer(g_glowLayer);
-    clearLayer(g_textLayer);
-
-    for (auto& p : g_particles) {
+    g_frameAlpha.resize(g_particles.size());
+    for (size_t i = 0; i < g_particles.size(); ++i) {
+        Particle& p = g_particles[i];
         if (g_frame > p.delay && p.alpha < 255) {
             p.alpha = std::min(255, p.alpha + 14 + randInt(0, 4));
         }
@@ -370,9 +372,19 @@ static void stepFrame() {
         } else {
             flick = 1.0f;
         }
-        int alpha = static_cast<int>(p.alpha * flick);
-        if (alpha <= 0) continue;
-        drawGlowText(p.tex, p.texW, p.texH, p.x, p.y, alpha);
+        g_frameAlpha[i] = static_cast<int>(p.alpha * flick);
+    }
+
+    clearLayer(g_glowLayer); // leaves render target set to g_glowLayer
+    for (size_t i = 0; i < g_particles.size(); ++i) {
+        Particle& p = g_particles[i];
+        drawGlow(p.tex, p.texW, p.texH, p.x, p.y, g_frameAlpha[i]);
+    }
+
+    clearLayer(g_textLayer); // leaves render target set to g_textLayer
+    for (size_t i = 0; i < g_particles.size(); ++i) {
+        Particle& p = g_particles[i];
+        drawText(p.tex, p.texW, p.texH, p.x, p.y, g_frameAlpha[i]);
     }
 }
 
