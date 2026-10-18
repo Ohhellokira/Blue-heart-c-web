@@ -61,3 +61,18 @@ html, body {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.12); }
 }
+
+#wasmLink {
+  position: fixed;
+  bottom: 14px;
+  right: 16px;
+  z-index: 5;
+  font: 12px sans-serif;
+  color: #ffb3c6;
+  text-decoration: none;
+  opacity: 0.55;
+}
+
+#wasmLink:hover {
+  opacity: 1;
+}
