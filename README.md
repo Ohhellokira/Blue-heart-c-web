@@ -10,10 +10,15 @@ official web backend, so the rendering/audio were rewritten from SFML to
 original's heart-curve math, particle placement/glow logic, and pulsing
 center title.
 
+`index.html` is the entire site — one self-contained file with the compiled
+WASM binary and all assets (fonts, song) embedded inline. No companion
+`.js`/`.wasm`/`.data` files.
+
 ## Run locally
 
-The build needs to be served over `http://` — opening `index.html` directly
-as a `file://` URL blocks the `.wasm`/`.data` fetches (CORS):
+Serve it over `http://` rather than double-clicking it — some browsers
+restrict a `file://` page's ability to initialize WebAssembly/audio the
+same way a real page load does:
 
 ```sh
 npx serve .
@@ -53,15 +58,13 @@ cd wasm
 bash build.sh
 ```
 
-This regenerates `index.html`, `index.js`, `index.wasm`, and `index.data` at
-the repo root (the actual published site) from `wasm/main_sdl.cpp`,
-`wasm/shell.html` (the HTML template), and `wasm/assets/` (fonts + song,
-baked into `index.data` at build time).
+This regenerates the single `index.html` at the repo root (the actual
+published site) from `wasm/main_sdl.cpp`, `wasm/shell.html` (the HTML
+template), and `wasm/assets/` (fonts + song, embedded inline at build time).
 
 ## Files
 
-- `index.html`, `index.js`, `index.wasm`, `index.data` — the built site
-  (what GitHub Pages actually serves)
+- `index.html` — the entire built site (what GitHub Pages serves)
 - `icon_64.png` — favicon
 - `wasm/main_sdl.cpp` — the C++ source (SDL2 port of `main.cpp`)
 - `wasm/shell.html` — HTML/CSS template (start overlay, styling) the build
