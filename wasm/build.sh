@@ -14,6 +14,6 @@ em++ main_sdl.cpp -O2 \
   -sEXPORTED_RUNTIME_METHODS=ccall \
   --preload-file assets@/assets \
   --shell-file shell.html \
-  -o heart.html
+  -o ../index.html
 
-echo "Built wasm/heart.html, wasm/heart.js, wasm/heart.wasm, wasm/heart.data"
+echo "Built index.html, index.js, index.wasm, index.data at the repo root"
