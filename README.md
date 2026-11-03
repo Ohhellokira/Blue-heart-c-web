@@ -4,71 +4,64 @@ A browser port of the "Blue Heart" C++/SFML particle animation: a heart made
 of drifting "love you" text, glowing in and filling out to a pulsing center
 title, synced with a song.
 
-This is real C++ compiled to **WebAssembly** with Emscripten. SFML has no
-official web backend, so the rendering/audio were rewritten from SFML to
-**SDL2 + SDL2_ttf + SDL2_mixer**, which Emscripten does support, keeping the
-original's heart-curve math, particle placement/glow logic, and pulsing
-center title.
+Real C++ compiled to **WebAssembly** with Emscripten. SFML has no official web
+backend, so the rendering/audio were rewritten from SFML to
+**SDL2 + SDL2_ttf + SDL2_mixer**, keeping the original heart-curve math,
+particle placement/glow logic, and pulsing center title.
 
 `index.html` is the entire site — one self-contained file with the compiled
 WASM binary and all assets (fonts, song) embedded inline. No companion
 `.js`/`.wasm`/`.data` files.
 
+## Files
+
+```
+index.html        ← the entire built site (what GitHub Pages serves)
+icon_64.png       ← favicon
+.nojekyll         ← tells GitHub Pages not to run Jekyll on this repo
+main_sdl.cpp      ← C++ source (SDL2 port)
+shell.html        ← HTML/CSS template the build wraps around the loader script
+build.sh          ← em++ build command
+assets/
+  Arimo.ttf       ← Arial-metric-compatible font (OFL)
+  Gelasio.ttf     ← Georgia-metric-compatible font (OFL)
+  love_you.mp3    ← background song
+```
+
 ## Run locally
 
-Serve it over `http://` rather than double-clicking it — some browsers
-restrict a `file://` page's ability to initialize WebAssembly/audio the
-same way a real page load does:
+Serve over `http://` — some browsers restrict WebAssembly/audio on `file://`:
 
 ```sh
 npx serve .
 ```
 
-Then visit the printed localhost URL, and tap the heart to start (browsers
-block audio with sound until a user gesture).
+Then visit the printed localhost URL and tap the heart to start (browsers
+require a user gesture before playing audio).
 
 ## Deploy to GitHub Pages
 
-1. Create a new GitHub repository (or use an existing one) and push this
-   folder's contents to it:
+### Option A — serve the pre-built `index.html` directly (instant)
 
-   ```sh
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git branch -M main
-   git remote add origin https://github.com/<you>/<repo>.git
-   git push -u origin main
-   ```
+1. Push this folder to a GitHub repository.
+2. Go to **Settings → Pages → Build and deployment → Source**.
+3. Choose **Deploy from a branch → `main` / `/ (root)`** → **Save**.
+4. Your site is live at `https://<you>.github.io/<repo>/` within a minute.
 
-2. On GitHub, go to **Settings → Pages**.
-3. Under **Build and deployment → Source**, choose **Deploy from a branch**.
-4. Pick the `main` branch and `/ (root)` folder, then **Save**.
-5. GitHub publishes the site at `https://<you>.github.io/<repo>/` within a
-   minute or two.
+### Option B — auto-build on every push with GitHub Actions (recommended)
 
-## Rebuilding
+1. Go to **Settings → Pages → Source** and choose **GitHub Actions**.
+2. The workflow at `.github/workflows/deploy.yml` will compile the C++ and
+   deploy automatically on every push to `main`.
 
-Source lives in `wasm/`. After editing `wasm/main_sdl.cpp`, rebuild with the
-Emscripten SDK installed and sourced:
+## Rebuild
+
+After editing `main_sdl.cpp` or `shell.html`, rebuild with the Emscripten SDK:
 
 ```sh
 source /path/to/emsdk/emsdk_env.sh
-cd wasm
 bash build.sh
 ```
 
-This regenerates the single `index.html` at the repo root (the actual
-published site) from `wasm/main_sdl.cpp`, `wasm/shell.html` (the HTML
-template), and `wasm/assets/` (fonts + song, embedded inline at build time).
-
-## Files
-
-- `index.html` — the entire built site (what GitHub Pages serves)
-- `icon_64.png` — favicon
-- `wasm/main_sdl.cpp` — the C++ source (SDL2 port of `main.cpp`)
-- `wasm/shell.html` — HTML/CSS template (start overlay, styling) the build
-  wraps around the generated loader script
-- `wasm/assets/` — fonts (Arimo/Gelasio, OFL-licensed Arial/Georgia
-  substitutes — Microsoft's fonts can't be redistributed) and the song
-- `wasm/build.sh` — the `em++` build command
+This regenerates `index.html` from `main_sdl.cpp`, `shell.html`, and
+`assets/` (all embedded inline). Commit and push the new `index.html`.
